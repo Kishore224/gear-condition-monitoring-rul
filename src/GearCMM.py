@@ -119,9 +119,9 @@ healthy_spectrum_amplitude = (
 
 filtered_healthy_fft = healthy_fft.copy()
 
-remove_800Hz = np.isclose(np.abs(frequency), GMF)
+remove_gmf = np.isclose(np.abs(frequency), GMF)
 
-filtered_healthy_fft[remove_800Hz] = 0
+filtered_healthy_fft[remove_gmf] = 0
 
 
 healthy_residual = np.fft.ifft(filtered_healthy_fft)
@@ -221,12 +221,12 @@ for acquisition_time in acquisition_times:
 
     filtered_damaged_fft = damaged_fft.copy()
 
-    remove_800Hz_damaged = np.isclose(
+    remove_gmf_damaged = np.isclose(
       np.abs(damaged_frequency),
       GMF
      )
 
-    filtered_damaged_fft[remove_800Hz_damaged] = 0
+    filtered_damaged_fft[remove_gmf_damaged] = 0
 
     filtered_spectrum_amplitude = (
     2 * np.abs(
