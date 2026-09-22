@@ -1,16 +1,22 @@
-Simulated Real-Time Gear Condition Monitoring and RUL Prediction System
+Simulated Real-Time Gear Condition Monitoring & RUL Prediction
 
-A simulation-based gear condition monitoring system combining gear pitting degradation modelling, vibration signal processing, vibration-based condition assessment, physics-based Remaining Useful Life (RUL) prediction, and real-time IIoT visualisation.
+A mechanical engineering condition-monitoring project combining gear pitting degradation, vibration signal processing, prognostics, and an IIoT data pipeline.
 
 Project Overview
 
-Gear failures, particularly pitting failures, can lead to unexpected downtime, increased maintenance costs, and production losses.
+Gear pitting can progressively reduce gear health and, if left undetected, contribute to unexpected downtime and maintenance costs.
 
-This project develops a simulated real-time gear condition monitoring system to study how gear degradation can be detected and tracked using vibration signals.
+This project builds a simulation-based gear condition monitoring system that connects a mechanical degradation model with vibration analysis and digital monitoring.
 
-The system combines:
+The workflow is:
 
-Pitting-area degradation modelling
+Pitting Area → Synthetic Vibration → TSA → FFT → GMF Analysis → GMF Filtering → Residual Vibration → CCR + RUL → MQTT → Node-RED → InfluxDB → Grafana
+
+The project is intentionally simulation-based: the gearbox vibration is computationally generated rather than acquired from a physical test rig.
+
+What This Project Demonstrates
+
+Mechanical gear pitting degradation modelling
 
 Synthetic vibration signal generation
 
@@ -24,79 +30,54 @@ GMF sideband analysis
 
 Residual vibration extraction
 
-Correlation Coefficient (CCR) as a condition indicator
+Correlation Coefficient (CCR) as a vibration health indicator
 
-Physics-based Remaining Useful Life (RUL) prediction
+Physics-based Remaining Useful Life (RUL) estimation
 
-MQTT data transmission
+MQTT-based data transmission
 
 Node-RED data processing
 
 InfluxDB time-series storage
 
-Grafana real-time visualisation
-
-The overall objective is to connect mechanical gear degradation and vibration analysis with digital condition monitoring and predictive maintenance concepts.
+Grafana visualisation
 
 System Architecture
 
+flowchart TD
+    A[Reference Gear Pitting Data] --> B[Pitting Area D(t)]
+    B --> C[Pitting Degradation Model]
+    C --> D[Synthetic Vibration Signal]
+    D --> E[Time Synchronous Averaging]
+    E --> F[FFT]
+    F --> G[GMF + Sidebands]
+    G --> H[GMF Filtering]
+    H --> I[Residual Vibration]
+    I --> J[CCR Health Indicator]
+    C --> K[Physics-Based RUL]
+    J --> L[MQTT]
+    K --> L
+    L --> M[Node-RED]
+    M --> N[InfluxDB]
+    N --> O[Grafana]
+
 Reference Gear Degradation Data
-              │
-              ▼
-       Pitting Area D(t)
-              │
-              ▼
-    Pitting Degradation Model
-              │
-              ▼
-    Synthetic Vibration Signal
-              │
-              ▼
- Time Synchronous Averaging (TSA)
-              │
-              ▼
-             FFT
-              │
-              ▼
-   Gear Mesh Frequency (GMF)
-        + GMF Sidebands
-              │
-              ▼
-       GMF Filtering
-              │
-              ▼
-       Residual Vibration
-              │
-         ┌────┴────┐
-         ▼         ▼
-        CCR       RUL
-         │         │
-         └────┬────┘
-              ▼
-             MQTT
-              │
-              ▼
-          Node-RED
-              │
-              ▼
-           InfluxDB
-              │
-              ▼
-            Grafana
 
-Reference Degradation Data
-
-The simulated degradation trajectory is based on pitting-area measurements reported in:
+The simulated degradation trajectory uses pitting-area measurements reported in:
 
 Kundu et al. (2025), Development of data-driven, physics-based, and hybrid prognosis frameworks: a case study for gear remaining useful life prediction.
-
-The reference degradation points used in the simulation are:
 
 Point
 
 Time (min)
 
 Pitting Area (mm²)
+
+Healthy
+
+0
+
+0.0
 
 M1
 
@@ -128,11 +109,9 @@ M5
 
 8.0
 
-An initial healthy condition of 0 mm² pitting area at 0 minutes is also included.
+Linear interpolation is used between the reference points to estimate pitting area at intermediate simulation times.
 
-Linear interpolation between the reference points is used to estimate the pitting area at intermediate simulation times.
-
-Gear and Simulation Parameters
+Gear & Simulation Parameters
 
 Parameter
 
@@ -176,395 +155,198 @@ Maximum pitting area
 
 Gear Mesh Frequency
 
-The Gear Mesh Frequency (GMF) represents the frequency at which gear teeth engage.
-
-It is calculated as:
+The Gear Mesh Frequency is calculated from the number of gear teeth and shaft frequency:
 
 GMF = Number of gear teeth × Shaft frequency
-
-For this simulation:
-
-GMF = 27 × 40
-GMF = 1080 Hz
-
-Therefore, the simulated gear mesh frequency is 1080 Hz.
+    = 27 × 40
+    = 1080 Hz
 
 GMF Sidebands
 
-Gear faults can produce frequency components around the Gear Mesh Frequency.
+The first-order sidebands are defined using the shaft rotational frequency:
 
-In this simulation, the shaft rotational frequency is used to define the first-order sidebands.
+Lower sideband = GMF - Shaft frequency
+               = 1080 - 40
+               = 1040 Hz
 
-Lower Sideband
+GMF = 1080 Hz
 
-Lower Sideband = GMF - Shaft Frequency
-                = 1080 - 40
-                = 1040 Hz
+Upper sideband = GMF + Shaft frequency
+               = 1080 + 40
+               = 1120 Hz
 
-Upper Sideband
+So the simulated gear-mesh region contains:
 
-Upper Sideband = GMF + Shaft Frequency
-                = 1080 + 40
-                = 1120 Hz
+1040 Hz — 1080 Hz — 1120 Hz
 
-Therefore:
+The sideband amplitudes increase progressively with simulated pitting severity.
 
-Lower Sideband = 1040 Hz
-GMF            = 1080 Hz
-Upper Sideband = 1120 Hz
+Vibration Signal Generation
 
-The sideband amplitudes are increased progressively with simulated pitting severity.
-
-Synthetic Vibration Signal
-
-The vibration signal is computationally generated using:
+The healthy vibration signal contains:
 
 Shaft rotational frequency
 
 Gear Mesh Frequency
 
-GMF sidebands
-
 Random noise
 
-The healthy signal contains the shaft-frequency and GMF components.
-
-As pitting progresses, additional sideband components are introduced around the GMF.
+As pitting progresses, GMF sidebands are introduced around the GMF.
 
 Conceptually:
 
-Healthy Gear
+Healthy:
+Shaft frequency + GMF + Noise
 
-Shaft Frequency
-       +
-Gear Mesh Frequency
-       +
-Noise
-
-and:
-
-Pitted Gear
-
-Shaft Frequency
-       +
-Gear Mesh Frequency
-       +
-GMF Sidebands
-       +
-Noise
+Pitted:
+Shaft frequency + GMF + GMF sidebands + Noise
 
 The sideband amplitude is scaled according to the simulated pitting area.
 
-Time Synchronous Averaging (TSA)
+Signal Processing
 
-Time Synchronous Averaging is used to reduce non-synchronous components of the vibration signal and emphasize components related to gear rotation.
+1. Time Synchronous Averaging (TSA)
 
-The shaft speed is:
+At 2400 RPM:
 
-RPM = 2400
-
-Therefore:
-
-Shaft Frequency = 2400 / 60
+Shaft frequency = 2400 / 60
                 = 40 Hz
 
-The number of samples per revolution is:
+With a 20 kHz sampling rate:
 
-Samples per Revolution
-= Sampling Frequency / Shaft Frequency
+Samples/revolution = 20,000 / 40
+                   = 500 samples/revolution
 
-= 20,000 / 40
+For a 10-second acquisition:
 
-= 500 samples/revolution
+Number of revolutions = 40 × 10
+                      = 400 revolutions
 
-The acquisition duration is 10 seconds.
-
-Therefore, the number of revolutions in one acquisition is:
-
-40 × 10 = 400 revolutions
-
-The simulated signal is reshaped into:
+The vibration signal is therefore reshaped into:
 
 400 revolutions × 500 samples/revolution
 
 and averaged across revolutions to obtain the TSA signal.
 
-Fast Fourier Transform (FFT)
+2. FFT
 
-The Time Synchronous Average signal is converted from the time domain into the frequency domain using the Fast Fourier Transform (FFT).
+The TSA signal is transformed into the frequency domain using FFT.
 
-The spectrum allows the main frequency components to be observed, including:
+The resulting spectrum is used to observe:
 
 Shaft frequency
 
-Gear Mesh Frequency
+GMF
 
 GMF sidebands
 
 Other frequency components
 
-The frequency-domain representation is used for subsequent gear-mesh filtering and residual signal extraction.
+3. GMF Filtering & Residual Vibration
 
-GMF Filtering and Residual Signal
-
-The Gear Mesh Frequency component is removed from the FFT spectrum.
-
-The filtered spectrum is then transformed back into the time domain using the inverse FFT.
-
-This produces a residual vibration signal.
-
-The processing sequence is:
+The GMF component is removed from the FFT spectrum.
 
 TSA Signal
-    │
-    ▼
+    ↓
    FFT
-    │
-    ▼
+    ↓
 Frequency Spectrum
-    │
-    ▼
+    ↓
 Remove GMF Component
-    │
-    ▼
+    ↓
 Filtered Spectrum
-    │
-    ▼
+    ↓
 Inverse FFT
-    │
-    ▼
+    ↓
 Residual Vibration
 
-The residual signal is subsequently used for calculating the vibration-based condition indicator.
+The residual vibration is then used for the CCR health indicator.
 
-Correlation Coefficient (CCR)
+Condition Indicator: CCR
 
-The Correlation Coefficient of the Residual Signal (CCR) is used as a vibration-based health indicator.
+The Correlation Coefficient (CCR) compares the current residual vibration with the healthy residual reference.
 
-The healthy residual signal is used as the reference.
-
-For each simulated degradation stage:
-
-Current Residual Signal
-          │
-          ▼
+Current Residual
+      ↓
 Compare with
-Healthy Residual Signal
-          │
-          ▼
+      ↓
+Healthy Residual
+      ↓
 Correlation Coefficient
-          │
-          ▼
-          CCR
+      ↓
+CCR
 
-The CCR indicates the similarity between the current residual vibration signal and the healthy reference signal.
+In this simulation, a reduction in CCR represents increasing deviation from the healthy vibration condition.
 
-A reduction in correlation represents increasing deviation from the healthy vibration condition in the simulation.
+Physics-Based RUL Prediction
 
-Physics-Based Remaining Useful Life (RUL)
+A physics-based pitting-growth model is used to estimate Remaining Useful Life.
 
-A physics-based pitting-growth model is used to estimate the remaining useful life of the gear.
-
-The model uses the pitting area as the degradation variable.
-
-The simulation parameters include:
+Simulation parameters:
 
 τ = 196.3 MPa
 M = 1.26
 log(C) = -21.37
-
-The corresponding value of C is calculated as:
-
 C = exp(log(C))
 
 The defined pitting threshold is:
 
 D_threshold = 8.0 mm²
 
-The model estimates the remaining number of gear cycles until the pitting area reaches the defined threshold.
-
-The predicted number of cycles is then converted into operating time using the shaft speed.
-
-Conceptually:
+The model estimates the remaining number of gear cycles until the pitting area reaches the defined threshold and converts the result into operating time using the shaft speed.
 
 Pitting Area
-      │
-      ▼
+     ↓
 Pitting Growth Model
-      │
-      ▼
+     ↓
 Remaining Gear Cycles
-      │
-      ▼
+     ↓
 Remaining Useful Life
-      │
-      ▼
-RUL in minutes
+     ↓
+RUL (minutes)
 
-Real-Time Simulation
+Accelerated Real-Time Simulation
 
-The degradation trajectory contains measurements separated by several hundred minutes, while running the simulation in real time would take many hours.
+The reference degradation trajectory spans almost 2000 simulated minutes.
 
-Therefore, the project uses an accelerated simulation.
+Running this literally would take a long time, so the simulation is accelerated:
 
-The simulated acquisition interval is 6 minutes while the actual Python program waits only 2 seconds between acquisitions.
+Simulated acquisition interval = 6 minutes
+Actual program delay            = 2 seconds
 
-This allows the complete degradation trajectory to be demonstrated within a practical time period while preserving the simulated degradation timeline.
-
-MQTT Data Transmission
-
-The Python simulation publishes the calculated condition-monitoring parameters using MQTT.
-
-Condition Topic
-
-gearbox/condition
-
-The condition message contains:
-
-{
-    "time_min": 500,
-    "damage_mm2": 1.0,
-    "ccr": 0.95,
-    "rul_min": 1234.5
-}
-
-The fields represent:
-
-Field
-
-Description
-
-time_min
-
-Simulated degradation time
-
-damage_mm2
-
-Simulated pitting area
-
-ccr
-
-Correlation Coefficient of the residual signal
-
-rul_min
-
-Predicted Remaining Useful Life
-
-Vibration Spectrum MQTT Topics
-
-The simulation also publishes vibration spectrum information.
-
-Healthy Spectrum
-
-gearbox/spectrum/healthy
-
-Current Spectrum
-
-gearbox/spectrum/current
-
-Filtered Spectrum
-
-gearbox/spectrum/filtered
-
-These topics allow the vibration spectrum and filtering process to be visualised through the IIoT pipeline.
+This allows the complete degradation trajectory to be demonstrated within a practical runtime while preserving the simulated degradation timeline.
 
 IIoT Data Pipeline
 
-The complete digital data pipeline is:
+flowchart LR
+    A[Python Simulation] -->|MQTT| B[Node-RED]
+    B --> C[InfluxDB]
+    C --> D[Grafana]
 
-Python
-  │
-  │ MQTT
-  ▼
-Node-RED
-  │
-  ▼
-InfluxDB
-  │
-  ▼
-Grafana
+MQTT Topics
 
-Python
+Condition data
 
-Python performs:
+gearbox/condition
 
-Degradation simulation
+Example:
 
-Vibration signal generation
-
-TSA
-
-FFT
-
-GMF filtering
-
-Residual signal calculation
-
-CCR calculation
-
-RUL calculation
-
-MQTT publishing
-
-Node-RED
-
-Node-RED is used as the data-processing and routing layer between MQTT and the time-series database.
-
-InfluxDB
-
-InfluxDB is used to store time-series condition-monitoring data.
-
-Grafana
-
-Grafana provides real-time visualisation of:
-
-Pitting area
-
-CCR
-
-RUL
-
-CCR trend
+{
+  "time_min": 500,
+  "damage_mm2": 1.0,
+  "ccr": 0.95,
+  "rul_min": 1234.5
+}
 
 Vibration spectra
 
-Project Outputs
+gearbox/spectrum/healthy
+gearbox/spectrum/current
+gearbox/spectrum/filtered
 
-The system produces three main condition-monitoring indicators:
+These topics allow the vibration spectrum and GMF-filtering process to be transferred through the IIoT pipeline.
 
-1. Pitting Area
-
-Represents the simulated physical degradation state of the gear.
-
-Pitting Area ↑
-      ↓
-Increasing degradation
-
-2. CCR
-
-Represents the similarity between the current residual vibration and the healthy residual reference.
-
-CCR ↓
-  ↓
-Increasing deviation from healthy condition
-
-3. RUL
-
-Represents the estimated remaining operating time until the defined pitting threshold is reached.
-
-RUL ↓
-  ↓
-Less remaining operating life
-
-Together:
-
-Pitting Area ──────► Physical Degradation
-       │
-       ├────────────► CCR ─────► Vibration Condition
-       │
-       └────────────► RUL ─────► Prognostic Estimate
-
-Technologies Used
+Technology Stack
 
 Technology
 
@@ -572,7 +354,7 @@ Purpose
 
 Python
 
-Simulation and signal processing
+Simulation and signal-processing workflow
 
 NumPy
 
@@ -592,11 +374,11 @@ Data processing and routing
 
 InfluxDB
 
-Time-series database
+Time-series data storage
 
 Grafana
 
-Real-time dashboard
+Dashboard visualisation
 
 Git
 
@@ -604,71 +386,74 @@ Version control
 
 GitHub
 
-Source-code management and project documentation
+Source-code management and documentation
 
 Project Structure
 
 GearCMM-Project/
 │
 ├── README.md
+├── LICENSE
 ├── .gitignore
+├── requirements.txt
 │
 ├── src/
 │   └── GearCMM.py
 │
-├── data/
-│
-├── plots/
-│
-├── results/
-│
 ├── node_red/
+│   └── flow.json
 │
 ├── grafana/
+│   └── dashboard.json
 │
+├── data/
+├── plots/
+├── results/
 └── docs/
 
-Folder Description
+Empty directories are included in the local project structure but are not tracked by Git until they contain files.
 
-src/ — Python source code
+Project Outputs
 
-data/ — Reference or input datasets
+The simulation produces three main condition-monitoring indicators:
 
-plots/ — Generated plots and visualisations
+Indicator
 
-results/ — Simulation results and calculated outputs
+Meaning
 
-node_red/ — Exported Node-RED flows
+Pitting Area
 
-grafana/ — Grafana dashboard configuration
+Simulated physical degradation state
 
-docs/ — Project documentation, diagrams, and supporting images
+CCR
+
+Similarity between current and healthy residual vibration
+
+RUL
+
+Estimated remaining operating time until the pitting threshold
+
+Conceptually:
+
+Pitting Area ─────► Physical Degradation
+       │
+       ├──────────► CCR ─────► Vibration Condition
+       │
+       └──────────► RUL ─────► Prognostic Estimate
 
 Current Project Status
 
 The current implementation is a simulation-based gear condition monitoring framework.
 
-The vibration signals are computationally generated rather than acquired from a physical gearbox.
+The vibration signals are computationally generated rather than acquired from a physical gearbox. The degradation trajectory is based on reference pitting-area data, while the vibration response and sideband behaviour are simulated to demonstrate the complete condition-monitoring workflow.
 
-The degradation trajectory is based on reference pitting-area data, while the vibration response and sideband behaviour are simulated to demonstrate the complete condition-monitoring workflow.
+The current system integrates:
 
-The current system demonstrates the integration of:
-
-Mechanical Degradation
-        +
-Vibration Signal Processing
-        +
-Condition Monitoring
-        +
-Prognostics
-        +
-IIoT Data Pipeline
-        +
-Real-Time Visualisation
+Mechanical Degradation + Vibration Signal Processing + Condition Monitoring + Prognostics + IIoT Data Pipeline + Visualisation
 
 Future Development
 
-Future development could include:
+Possible extensions include:
 
 Validation using experimental gearbox vibration measurements
 
@@ -680,7 +465,7 @@ Improved physical pitting-growth modelling
 
 Machine-learning-based degradation estimation
 
-Comparison of multiple vibration-based health indicators
+Comparison of multiple vibration health indicators
 
 Automated fault classification
 
@@ -696,3 +481,7 @@ Kishore Kumar L S
 
 M.Sc. Advanced Manufacturing
 Technische Universität Chemnitz
+
+Disclaimer
+
+This repository is a simulation and learning project. The vibration signals and condition-monitoring response are computationally generated and should not be interpreted as measurements from a physical gearbox.
