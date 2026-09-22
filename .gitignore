@@ -1,0 +1,8 @@
+Gearcmmcopy.py
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.vscode/
+*.log
