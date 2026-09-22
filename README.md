@@ -1,5 +1,7 @@
 Simulated Real-Time Gear Condition Monitoring & RUL Prediction
 
+![Gear Condition Monitoring Project Poster](docs/PosterCMM.png)
+
 A mechanical engineering condition-monitoring project combining gear pitting degradation, vibration signal processing, prognostics, and an IIoT data pipeline.
 
 Project Overview
